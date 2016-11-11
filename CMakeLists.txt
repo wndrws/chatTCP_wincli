@@ -3,5 +3,5 @@ project(chatTCP_wincli)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-set(SOURCE_FILES main.cpp skel.h)
+set(SOURCE_FILES main.cpp skel.h etcp.h sofuncs.c wincompat.cpp)
 add_executable(chatTCP_wincli ${SOURCE_FILES})
