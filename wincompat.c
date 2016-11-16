@@ -6,8 +6,8 @@
                         ( sizeof( bsdsocketerrs ) / \
                         sizeof( bsdsocketerrs[ 0 ] ) ) )
 
-extern int sys_nerr;
-extern char* sys_errlist[];
+//extern int sys_nerr;
+//extern char* sys_errlist[];
 extern char* program_name;
 static char* bsdsocketerrs[] =
 {

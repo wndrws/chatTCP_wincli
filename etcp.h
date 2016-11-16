@@ -47,6 +47,7 @@ SOCKET tcp_client(char *, char *);
 //void* smbrecv(SOCKET);
 void set_address(char *, char *, struct sockaddr_in *, char *);
 int inet_aton(char *cp, struct in_addr* pin);
+void init(char **argv);
 
 #ifdef __cplusplus
 }
