@@ -4,14 +4,14 @@
 extern "C" {
 #endif
 
-// Windows versio
+// Windows version
 #include <windows.h>
 #include <winsock2.h>
 
-struct timezone {
-    long tz_minuteswest;
-    long tz_dsttime;
-};
+//struct timezone {
+//    long tz_minuteswest;
+//    long tz_dsttime;
+//};
 
 typedef unsigned int u_int32_t;
 
