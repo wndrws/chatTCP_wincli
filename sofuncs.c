@@ -9,13 +9,13 @@ SOCKET tcp_server(char* hostname, char* portname) {
     set_address(hostname, portname, &local, "tcp");
     s = socket(AF_INET, SOCK_STREAM, 0);
     if(!isvalidsock(s))
-        error(1, errno, "Error in socket() call");
+        error(1, errno, "Error in socket() call", strerror(WSAGetLastError()));
     //if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char*) &optval, sizeof(optval)));
     //    error(1, errno, "Error in setsockopt() call");
     if(bind(s, (struct sockaddr*) &local, sizeof(local)))
-        error(1, errno, "Error in bind() call");
+        error(1, errno, "Error in bind() call", strerror(WSAGetLastError()));
     if(listen(s, NLISTEN))
-        error(1, errno, "Error in listen() call");
+        error(1, errno, "Error in listen() call", strerror(WSAGetLastError()));
     return s;
 }
 
@@ -26,9 +26,9 @@ SOCKET tcp_client(char* hostname, char* portname) {
     set_address(hostname, portname, &peer, "tcp");
     s = socket(AF_INET, SOCK_STREAM, 0);
     if(!isvalidsock(s))
-        error(1, errno, "Error in socket() call");
+        error(1, errno, "Error in socket() call", strerror(WSAGetLastError()));
     if(connect(s, (struct sockaddr*) &peer, sizeof(peer)))
-        error(1, errno, "Error in connect() call");
+        error(1, errno, "Error in connect() call: %s", strerror(WSAGetLastError()));
     return s;
 }
 

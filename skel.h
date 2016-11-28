@@ -15,7 +15,8 @@ extern char* program_name;
 //    long tz_dsttime;
 //};
 
-typedef unsigned int u_int32_t;
+//typedef unsigned __int16 uint16_t;
+//typedef unsigned __int32 uint32_t;
 
 //#define EMSGSIZE        WSAEMSGSIZE
 #define INIT()          init( argv );

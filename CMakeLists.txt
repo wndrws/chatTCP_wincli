@@ -3,6 +3,6 @@ project(chatTCP_wincli)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-set(SOURCE_FILES skel.h etcp.h sofuncs.c wincompat.c miscfuncs.c main.cpp)
+set(SOURCE_FILES skel.h etcp.h sofuncs.c wincompat.c miscfuncs.c main.cpp iofuncs.c ChatServer.cpp ChatServer.h)
 add_executable(chatTCP_wincli ${SOURCE_FILES})
 target_link_libraries(chatTCP_wincli ws2_32)
