@@ -91,6 +91,11 @@ string ChatServer::startChat(string peer) {
     return (it == m_Users.end() ? "" : (it->second + "#" + to_string(it->first)));
 }
 
+int ChatServer::sendMessage(string msg) {
+
+    return 0;
+}
+
 // Parsing for old format of UsersList packet
 //    char buf [MAX_USERSONLINE*36];
 

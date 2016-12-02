@@ -30,4 +30,5 @@ public:
     int receiveUsersList();
     void showUsersList();
     string startChat(string peername);
+    int sendMessage(string msg);
 };
