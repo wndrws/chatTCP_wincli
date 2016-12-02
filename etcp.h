@@ -32,7 +32,7 @@ void error(int, int, const char *, ...);
 int readn(SOCKET, char *, int);
 int readvrec(SOCKET, char *, int);
 //int readcrlf(SOCKET, char*, size_t);
-//int readline(SOCKET, char*, size_t);
+int readline(SOCKET, char*, int);
 SOCKET tcp_server(char *, char *);
 SOCKET tcp_client(char *, char *);
 //int udp_server(char*, char*);
@@ -45,7 +45,7 @@ SOCKET tcp_client(char *, char *);
 //void smbfree(void*);
 //void smbsend(SOCKET, void*);
 //void* smbrecv(SOCKET);
-void set_address(char *, char *, struct sockaddr_in *, char *);
+static void set_address(char *, char *, struct sockaddr_in *, char *);
 int inet_aton(char *cp, struct in_addr* pin);
 void init(char **argv);
 
