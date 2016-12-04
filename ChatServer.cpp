@@ -108,11 +108,11 @@ string ChatServer::startChat(string peer) {
         int id = atoi(str_id.c_str());
         it = m_Users.find(id);
     } else { //Search for the name
-        for (it = m_Users.begin(); it != m_Users.end(); it++) {
+        for (it = m_Users.begin(); it != m_Users.end(); ++it) {
             if (it->second == peer) break;
         }
     }
-    setCurrentPeer(it->first);
+    if(it != m_Users.end()) setCurrentPeer(it->first);
     return (it == m_Users.end() ? "" : (it->second + "#" + to_string(it->first)));
 }
 

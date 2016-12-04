@@ -26,7 +26,7 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
     int rcvdb;
     bool ok = true;
 
-    while(ok) {
+    while(ok && bgThreadAlive) {
         if (!MessagesToSend.empty()) {
             SCOPE_LOCK_MUTEX(autoMutex.get());
             if (!MessagesToSend.empty()) {
@@ -60,6 +60,7 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
                     break;
                 case CODE_FORCEDLOGOUT:
                     cout << "[ You were forced to logout by server ]" << endl;
+                    cout << "Press ENTER to exit..." << endl;
                     ok = false;
                     break;
                 case CODE_LOGINNOTIFY:
@@ -101,7 +102,7 @@ int main(int argc, char** argv) {
         // Log in
         cout << "What is your name?" << endl;
         while (1) {
-            cin >> username;
+            getline(cin, username);
             if (username == "/quit") throw Exception();
             if (username.length() <= MAX_USERNAME_LENGTH) {
                 if (username.find('#') != string::npos) {
@@ -127,8 +128,9 @@ int main(int argc, char** argv) {
             /* NO SOCKET OPERATIONS HERE */
             cout << "Type name or id (with # symbol) of user you wish to chat with:" << endl;
             while (bgThreadAlive) {
-                cin >> name;
+                getline(cin, name);
                 if (name == "/quit") throw Exception();
+                if(!bgThreadAlive) break;
                 if (name == "/refresh") {
                     chatServer.showUsersList();
                     continue;
@@ -153,18 +155,23 @@ int main(int argc, char** argv) {
             while (bgThreadAlive) {
                 cin >> str;
                 if (str == "/quit") throw Exception();
-                if (str == "/bye") break;
+                if(!bgThreadAlive) break;
+                if (str == "/bye") {
+                    break;
+                }
                 {
                     SCOPE_LOCK_MUTEX(autoMutex.get());
                     MessagesToSend.push(str);
                 }
             }
+            if(!bgThreadAlive) break;
             // Dialogue leaving process
             // ...
         }
     } catch (Exception& ex) {
+        // TODO log out first
         bgThreadAlive = false;
-        // Join bgThread?
+        // TODO then join bgThread
     }
     cout << "Disconnecting from server..." << endl;
     shutdown(s, SD_BOTH);
