@@ -12,8 +12,18 @@
 #define CODE_LOGINREQUEST 1
 #define CODE_LOGOUTREQUEST 2
 #define CODE_LOGINANSWER 3
+#define CODE_LOGOUTANSWER 4
+#define CODE_FORCEDLOGOUT 5
+#define CODE_LOGINNOTIFY 6
+#define CODE_LOGOUTNOTIFY 7
+#define CODE_SRVERR 8
+#define CODE_HEARTBEAT 9
+
+#define CODE_INMSG 128
+#define CODE_OUTMSG 129
 
 #define MAX_USERNAME_LENGTH 32
+#define MAX_MSG_LENGTH 4096
 
 using namespace std;
 
@@ -24,11 +34,22 @@ private:
     SOCKET m_Socket;
     unordered_map<int, string> m_Users;
     int m_ThisUserID;
+    volatile int m_CurrentPeer;
+
+    int receiveUsersListPacket();
 public:
+    ChatServer() : m_Socket(0) {};
     ChatServer(SOCKET);
+    void setCurrentPeer(int id);
+    int getCurrentPeer() const;
+    string getFullName(int id) const;
+
     int login(string username);
     int receiveUsersList();
     void showUsersList();
     string startChat(string peername);
     int sendMessage(string msg);
+    string receiveServerMessage();
+    bool receiveLoginNotification();
+    bool receiveLogoutNotification();
 };

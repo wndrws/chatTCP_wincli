@@ -10,6 +10,21 @@ ChatServer::ChatServer(SOCKET s) {
     m_Socket = s;
 }
 
+void ChatServer::setCurrentPeer(int id) {
+    m_CurrentPeer = id;
+}
+
+int ChatServer::getCurrentPeer() const {
+    return m_CurrentPeer;
+}
+
+
+string ChatServer::getFullName(int id) const {
+    auto it = m_Users.find(id);
+    if(it == m_Users.cend()) return "";
+    else return (it->second + "#" + to_string(id));
+}
+
 int ChatServer::login(string username) {
     // username.size() is guaranteed to be less than 33
     string msg = username;
@@ -29,31 +44,40 @@ int ChatServer::login(string username) {
     return 0;
 }
 
-int ChatServer::receiveUsersList() {
-    char code;
+int ChatServer::receiveUsersListPacket() {
     char id_buf [10]; //max 10 digits in a 32-bit id
     char name_buf [MAX_USERNAME_LENGTH];
     int id;
     int bnum;
+    int cnt = 0;
 
+    while(1) {
+        bnum = readline(m_Socket, id_buf, sizeof(id_buf));
+        if (bnum < 0) {
+            cerr << "UsersList packet corrupted: no id" << endl;
+            return -1;
+        } else if (strcmp(id_buf,"\4\n") == 0) {
+            break;
+        }
+        id = atoi(id_buf);
+        bnum = readline(m_Socket, name_buf, sizeof(name_buf));
+        if (bnum <= 0) {
+            cerr << "UsersList packet corrupted: no name for id" << endl;
+            return -2;
+        }
+        name_buf[bnum-1] = '\0';
+        m_Users[id] = string(name_buf);
+        cnt++;
+    }
+    return cnt;
+}
+
+int ChatServer::receiveUsersList() {
+    char code;
     readn(m_Socket, &code, 1);
     if(code == CODE_LOGINANSWER) {
-        while(1) {
-            bnum = readline(m_Socket, id_buf, sizeof(id_buf));
-            if (bnum < 0) {
-                cout << "UsersList packet corrupted: no id" << endl;
-                return -1;
-            } else if (strcmp(id_buf,"\4\n") == 0) {
-                break;
-            }
-            id = atoi(id_buf);
-            bnum = readline(m_Socket, name_buf, sizeof(name_buf));
-            if (bnum <= 0) {
-                cout << "UsersList packet corrupted: no name for id" << endl;
-                return -1;
-            }
-            name_buf[bnum-1] = '\0';
-            m_Users[id] = string(name_buf);
+        if(receiveUsersListPacket() < 1) {
+            cerr << "Error occurred while receiving users list!" << endl;
         }
     } else {
         cout << "Inappropriate receiveUsersList() call." << endl;
@@ -88,12 +112,62 @@ string ChatServer::startChat(string peer) {
             if (it->second == peer) break;
         }
     }
+    setCurrentPeer(it->first);
     return (it == m_Users.end() ? "" : (it->second + "#" + to_string(it->first)));
 }
 
 int ChatServer::sendMessage(string msg) {
-
+    // use CODE_INMSG here
     return 0;
+}
+
+string ChatServer::receiveServerMessage() {
+    char buf [MAX_MSG_LENGTH];
+    int r;
+
+    r = readvrec(m_Socket, buf, sizeof(buf));
+    if(r < 0) {
+        cerr << "Failed to read server message!" << endl;
+    } else if (r == 0) {
+        //?
+        return "";
+    } else {
+        buf[r] = '\0';
+        return string(buf);
+    }
+    return "";
+}
+
+bool ChatServer::receiveLoginNotification() {
+    auto it1 = m_Users.find(getCurrentPeer());
+    if(receiveUsersListPacket() < 1) {
+        cerr << "Error occurred while receiving users list from notification!" << endl;
+    }
+    auto it2 = m_Users.find(getCurrentPeer());
+    return (it1 == m_Users.cend() && it2 != m_Users.cend());
+}
+
+bool ChatServer::receiveLogoutNotification() {
+    auto it1 = m_Users.find(getCurrentPeer());
+
+    char id_buf [10]; //max 10 digits in a 32-bit id
+    int id;
+    int bnum;
+
+    while(1) {
+        bnum = readline(m_Socket, id_buf, sizeof(id_buf));
+        if (bnum < 0) {
+            cerr << "UsersList packet corrupted: no id" << endl;
+            return -1;
+        } else if (strcmp(id_buf,"\4\n") == 0) {
+            break;
+        }
+        id = atoi(id_buf);
+        m_Users.erase(id);
+    }
+
+    auto it2 = m_Users.find(getCurrentPeer());
+    return (it1 != m_Users.cend() && it2 == m_Users.cend());
 }
 
 // Parsing for old format of UsersList packet
