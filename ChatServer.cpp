@@ -44,6 +44,16 @@ int ChatServer::login(string username) {
     return 0;
 }
 
+int ChatServer::logout() {
+    char code = CODE_LOGOUTREQUEST;
+    int r = send(m_Socket, &code, 1, 0);
+    if(r == SOCKET_ERROR) {
+        printf("Failed to logout with error: %s\n", strerror(r));
+        return -1;
+    }
+    m_Users.clear();
+}
+
 int ChatServer::receiveUsersListPacket() {
     char id_buf [10]; //max 10 digits in a 32-bit id
     char name_buf [MAX_USERNAME_LENGTH];

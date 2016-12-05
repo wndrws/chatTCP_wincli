@@ -18,7 +18,9 @@ ChatServer chatServer;
 queue<string> MessagesToSend;
 static CAutoMutex autoMutex;
 volatile bool bgThreadAlive;
+volatile bool checkOnline = true;
 
+HANDLE bgThread;
 DWORD WINAPI BackgroundThread(LPVOID data) {
     SOCKET s = (SOCKET) data;
     string msg;
@@ -67,12 +69,20 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
                     if(chatServer.receiveLoginNotification()) {
                         cout << "[ " << chatServer.getFullName(
                                 chatServer.getCurrentPeer()) << " has come online ]";
+                    } else if(checkOnline) {
+                        cout << "[ Some users have come online - "
+                             << "type /refresh to see the whole list ]" << endl;
+                        checkOnline = false;
                     }
                     break;
                 case CODE_LOGOUTNOTIFY:
                     if(chatServer.receiveLogoutNotification()) {
                         cout << "[ " << chatServer.getFullName(
                                 chatServer.getCurrentPeer()) << " has gone offline ]";
+                    } else if(checkOnline) {
+                        cout << "[ Some users have gone offline - "
+                             << "type /refresh to see the whole list ]" << endl;
+                        checkOnline = false;
                     }
                     break;
                 case CODE_HEARTBEAT:
@@ -118,7 +128,7 @@ int main(int argc, char** argv) {
             chatServer.showUsersList();
         }
 
-        HANDLE bgThread = CreateThread(NULL, 0, BackgroundThread, (LPVOID) s, 0, NULL);
+        bgThread = CreateThread(NULL, 0, BackgroundThread, (LPVOID) s, 0, NULL);
         if(bgThread == NULL) {
             cerr << "CANNOT START THREAD" << endl;
             throw Exception();
@@ -153,7 +163,7 @@ int main(int argc, char** argv) {
             cout << "Chat with " << peername << ":" << endl << endl;
             string str;
             while (bgThreadAlive) {
-                cin >> str;
+                getline(cin, str);
                 if (str == "/quit") throw Exception();
                 if(!bgThreadAlive) break;
                 if (str == "/bye") {
@@ -165,17 +175,17 @@ int main(int argc, char** argv) {
                 }
             }
             if(!bgThreadAlive) break;
-            // Dialogue leaving process
-            // ...
+            checkOnline = true;
+            system("cls");
         }
     } catch (Exception& ex) {
-        // TODO log out first
+        chatServer.logout();
         bgThreadAlive = false;
-        // TODO then join bgThread
+        WaitForSingleObject(bgThread, 60000);
     }
     cout << "Disconnecting from server..." << endl;
     shutdown(s, SD_BOTH);
     cout << "Closing socket and exiting..." << endl;
-    closesocket(s);
+    CLOSE(s);
     EXIT(0);
 }

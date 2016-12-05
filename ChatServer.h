@@ -45,6 +45,7 @@ public:
     string getFullName(int id) const;
 
     int login(string username);
+    int logout();
     int receiveUsersList();
     void showUsersList();
     string startChat(string peername);
