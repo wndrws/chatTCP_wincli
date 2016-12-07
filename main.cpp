@@ -19,6 +19,7 @@ queue<string> MessagesToSend;
 static CAutoMutex autoMutex;
 volatile bool bgThreadAlive;
 volatile bool checkOnline = true;
+volatile bool checkPending = false;
 
 HANDLE bgThread;
 DWORD WINAPI BackgroundThread(LPVOID data) {
@@ -35,7 +36,7 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
                 msg = MessagesToSend.front();
                 int r = chatServer.sendMessage(msg);
                 if (r < 0) {
-                    cout << "Failed to send message!" << endl;
+                    cout << "Retrying..." << endl;
                 } else {
                     MessagesToSend.pop();
                 }
@@ -51,7 +52,13 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
         } else {
             switch(code) {
                 case CODE_OUTMSG: // Incoming message from some client
-
+                    checkPending = chatServer.receiveMessage();
+                    if(checkPending && chatServer.getCurrentPeer() == 0) {
+                        cout << "[ " << "You have incoming message(s) from "
+                             << chatServer.getPendingList() << " ]" << endl;
+                        checkPending = false;
+                    }
+                    chatServer.showMessage(chatServer.getCurrentPeer());
                     break;
                 case CODE_SRVERR:
                     ok = false;
@@ -67,8 +74,7 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
                     break;
                 case CODE_LOGINNOTIFY:
                     if(chatServer.receiveLoginNotification()) {
-                        cout << "[ " << chatServer.getFullName(
-                                chatServer.getCurrentPeer()) << " has come online ]";
+                        cout << "[ Your peer has come online ]" << endl;
                     } else if(checkOnline) {
                         cout << "[ Some users have come online - "
                              << "type /refresh to see the whole list ]" << endl;
@@ -77,8 +83,7 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
                     break;
                 case CODE_LOGOUTNOTIFY:
                     if(chatServer.receiveLogoutNotification()) {
-                        cout << "[ " << chatServer.getFullName(
-                                chatServer.getCurrentPeer()) << " has gone offline ]";
+                        cout << "[ Your peer has gone offline ]" << endl;
                     } else if(checkOnline) {
                         cout << "[ Some users have gone offline - "
                              << "type /refresh to see the whole list ]" << endl;
@@ -106,6 +111,7 @@ int main(int argc, char** argv) {
     INIT();
 
     s = tcp_client(argv[1], argv[2]);
+    //TODO сделать сокет неблокирующим!
     chatServer = ChatServer(s);
 
     try {
@@ -160,6 +166,7 @@ int main(int argc, char** argv) {
             }
             if(!bgThreadAlive) break;
             system("cls");
+            system("prompt [ You ]: ");
             cout << "Chat with " << peername << ":" << endl << endl;
             string str;
             while (bgThreadAlive) {
@@ -173,6 +180,7 @@ int main(int argc, char** argv) {
                     SCOPE_LOCK_MUTEX(autoMutex.get());
                     MessagesToSend.push(str);
                 }
+                SwitchToThread();
             }
             if(!bgThreadAlive) break;
             checkOnline = true;

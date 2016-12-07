@@ -6,6 +6,7 @@
 
 #include "etcp.h"
 #include <string>
+#include <vector>
 #include <unordered_map>
 
 #define CODE_SRVMSG 0
@@ -23,7 +24,7 @@
 #define CODE_OUTMSG 129
 
 #define MAX_USERNAME_LENGTH 32
-#define MAX_MSG_LENGTH 4096
+#define MAX_MSG_LENGTH 65535
 
 using namespace std;
 
@@ -33,8 +34,9 @@ class ChatServer {
 private:
     SOCKET m_Socket;
     unordered_map<int, string> m_Users;
+    unordered_map<int, vector<string>> m_Pending;
     int m_ThisUserID;
-    volatile int m_CurrentPeer;
+    volatile int m_CurrentPeer = 0;
 
     int receiveUsersListPacket();
 public:
@@ -43,6 +45,8 @@ public:
     void setCurrentPeer(int id);
     int getCurrentPeer() const;
     string getFullName(int id) const;
+    void showMessage(int id_from);
+    string getPendingList() const;
 
     int login(string username);
     int logout();
@@ -50,6 +54,7 @@ public:
     void showUsersList();
     string startChat(string peername);
     int sendMessage(string msg);
+    bool receiveMessage();
     string receiveServerMessage();
     bool receiveLoginNotification();
     bool receiveLogoutNotification();

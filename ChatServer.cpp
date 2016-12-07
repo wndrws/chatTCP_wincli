@@ -34,7 +34,7 @@ int ChatServer::login(string username) {
 
     int r = send(m_Socket, msg.c_str(), (int) msg.size(), 0);
     if(r == SOCKET_ERROR) {
-        printf("Failed to login with error: %s\n", strerror(r));
+        printf("Failed to login: %s\n", strerror(r));
         return -1;
     }
     if(r != msg.size()) {
@@ -48,10 +48,12 @@ int ChatServer::logout() {
     char code = CODE_LOGOUTREQUEST;
     int r = send(m_Socket, &code, 1, 0);
     if(r == SOCKET_ERROR) {
-        printf("Failed to logout with error: %s\n", strerror(r));
+        printf("Failed to logout: %s\n", strerror(r));
         return -1;
     }
+    //стоит ли ждать ответ от сервера? а в UDP?
     m_Users.clear();
+    return 0;
 }
 
 int ChatServer::receiveUsersListPacket() {
@@ -126,16 +128,74 @@ string ChatServer::startChat(string peer) {
     return (it == m_Users.end() ? "" : (it->second + "#" + to_string(it->first)));
 }
 
-int ChatServer::sendMessage(string msg) {
-    // use CODE_INMSG here
+int ChatServer::sendMessage(string text) {
+    string msg = to_string(getCurrentPeer()) + "\n" + text;
+    uint16_t len = (uint16_t) htons((u_short) text.size());
+    msg.insert(0, 1, (char) CODE_INMSG);
+    msg.insert(1, (char*) &len, 2);
+
+    int r = send(m_Socket, msg.c_str(), (int) msg.size(), 0);
+    if(r == SOCKET_ERROR) {
+        printf("Failed to send message: %s\n", strerror(r));
+        return -1;
+    }
+    if(r != msg.size()) {
+        printf("sendMessage: Not all bytes are sent!");
+        return -2;
+    }
     return 0;
 }
 
-string ChatServer::receiveServerMessage() {
-    char buf [MAX_MSG_LENGTH];
-    int r;
+bool ChatServer::receiveMessage() {
+    char buf [MAX_MSG_LENGTH+1];
+    char id_buf [10]; //max 10 digits in a 32-bit id
+    int id;
 
+    int r = readline(m_Socket, id_buf, sizeof(id_buf));
+    if(r < 0) {
+        cerr << "Failed to extract user id from incoming message!" << endl;
+    }
+    id = atoi(id_buf);
     r = readvrec(m_Socket, buf, sizeof(buf));
+    if(r < 0) {
+        cerr << "Failed to read incoming message!" << endl;
+    } else if (r == 0) {
+        //?
+    } else {
+        buf[r] = '\0';
+        m_Pending[id].push_back(string(buf));
+        return true;
+    }
+    return false;
+}
+
+void ChatServer::showMessage(int id_from) {
+    auto it = m_Pending.find(id_from);
+    if(it == m_Pending.cend()) return;
+    if(it->second.empty()) return;
+
+    string& name = m_Users.at(it->first);
+    for(const string& msg : it->second) {
+        cout << "[ " << name << " ]: " << msg << endl;
+    }
+    it->second.clear();
+}
+
+string ChatServer::getPendingList() const {
+    string list;
+    for(auto&& item : m_Pending) {
+        if(!item.second.empty()) list += getFullName(item.first) + ", ";
+    }
+    if(list.empty()) return "";
+    list.pop_back();
+    list.pop_back();
+    return list;
+}
+
+string ChatServer::receiveServerMessage() {
+    char buf [MAX_MSG_LENGTH+1];
+
+    int r = readvrec(m_Socket, buf, sizeof(buf));
     if(r < 0) {
         cerr << "Failed to read server message!" << endl;
     } else if (r == 0) {
