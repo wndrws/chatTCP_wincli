@@ -28,6 +28,7 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
     unsigned char code = 255;
     int rcvdb;
     bool ok = true;
+    u_long mode = 0;
 
     while(ok && bgThreadAlive) {
         if (!MessagesToSend.empty()) {
@@ -43,13 +44,25 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
             }
         }
         // Receive messages
+        if(mode == 0) {
+            mode = 1;
+            ioctlsocket(s, FIONBIO, &mode); // Make socket non-blocking
+        }
         rcvdb = readn(s, (char*) &code, 1);
         if (rcvdb == 0) {
             break;
         } else if(rcvdb < 0) {
-            cerr << "Error: reading from socket " << s << endl;
-            break;
+            int error = WSAGetLastError();
+            if(error == WSAEWOULDBLOCK || error == WSAEINTR) {
+                // It's ok, continue doing job after some time
+                Sleep(200); // sleep for 0.2 seconds
+            } else {
+                cerr << "Error: reading from socket " << s << endl;
+                break;
+            }
         } else {
+            mode = 0;
+            ioctlsocket(s, FIONBIO, &mode); // Make socket blocking again
             switch(code) {
                 case CODE_OUTMSG: // Incoming message from some client
                     checkPending = chatServer.receiveMessage();
@@ -62,6 +75,7 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
                     break;
                 case CODE_SRVERR:
                     ok = false;
+                    // no break here
                 case CODE_SRVMSG:
                     cout << "[ Message from server ]" << endl;
                     cout << chatServer.receiveServerMessage();
@@ -111,7 +125,6 @@ int main(int argc, char** argv) {
     INIT();
 
     s = tcp_client(argv[1], argv[2]);
-    //TODO сделать сокет неблокирующим!
     chatServer = ChatServer(s);
 
     try {
@@ -168,12 +181,14 @@ int main(int argc, char** argv) {
             system("cls");
             system("prompt [ You ]: ");
             cout << "Chat with " << peername << ":" << endl << endl;
+            chatServer.showMessage(chatServer.getCurrentPeer());
             string str;
             while (bgThreadAlive) {
                 getline(cin, str);
                 if (str == "/quit") throw Exception();
                 if(!bgThreadAlive) break;
                 if (str == "/bye") {
+                    chatServer.setCurrentPeer(0);
                     break;
                 }
                 {

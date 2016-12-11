@@ -129,11 +129,11 @@ string ChatServer::startChat(string peer) {
 }
 
 int ChatServer::sendMessage(string text) {
-    string msg = to_string(getCurrentPeer()) + "\n" + text;
-    uint16_t len = (uint16_t) htons((u_short) text.size());
+    //string msg = text;
+    //uint16_t len = (uint16_t) htons((u_short) text.size());
+    //msg.insert(0, (char*) &len, 2);
+    string msg = to_string(getCurrentPeer()) + "\n" + text + "\n";
     msg.insert(0, 1, (char) CODE_INMSG);
-    msg.insert(1, (char*) &len, 2);
-
     int r = send(m_Socket, msg.c_str(), (int) msg.size(), 0);
     if(r == SOCKET_ERROR) {
         printf("Failed to send message: %s\n", strerror(r));
@@ -156,13 +156,13 @@ bool ChatServer::receiveMessage() {
         cerr << "Failed to extract user id from incoming message!" << endl;
     }
     id = atoi(id_buf);
-    r = readvrec(m_Socket, buf, sizeof(buf));
+    r = readline(m_Socket, buf, sizeof(buf));
     if(r < 0) {
         cerr << "Failed to read incoming message!" << endl;
     } else if (r == 0) {
         //?
     } else {
-        buf[r] = '\0';
+        //buf[r] = '\0';
         m_Pending[id].push_back(string(buf));
         return true;
     }
