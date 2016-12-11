@@ -140,10 +140,19 @@ int main(int argc, char** argv) {
 
     try {
         // Log in
-        cout << "What is your name?" << endl;
+        cout << "Greetings! Type \"/help\" for more information." << endl;
         while (1) {
+            cout << "What is your name?" << endl;
             getline(cin, username);
             if (username == "/quit") throw Exception();
+            if (username == "/help") {
+                cout << "Command list:" << endl
+                     << "/refresh - show online users." << endl
+                     << "/bye - leave opened chat." << endl
+                     << "/quit - log out and exit." << endl
+                     << "/help - display this command list." << endl << endl;
+                continue;
+            }
             if (username.length() <= MAX_USERNAME_LENGTH) {
                 if (username.find('#') != string::npos) {
                     cout << "Symbol # is prohibited to use in names!" << endl;
@@ -194,7 +203,7 @@ int main(int argc, char** argv) {
             }
             if(!bgThreadAlive) break;
             system("cls");
-            system("prompt [ You ]: ");
+            //system("prompt [ You ]: ");
             cout << "Chat with " << peername << ":" << endl << endl;
             chatServer.showMessage(chatServer.getCurrentPeer());
             string str;
