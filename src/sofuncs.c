@@ -4,7 +4,7 @@
 SOCKET tcp_server(char* hostname, char* portname) {
     struct sockaddr_in local;
     SOCKET s;
-    const int optval = 1;
+    //const int optval = 1;
 
     set_address(hostname, portname, &local, "tcp");
     s = socket(AF_INET, SOCK_STREAM, 0);
@@ -49,12 +49,12 @@ static void set_address(char* hostname, char* portname,
             else sap->sin_addr = *(struct in_addr*)hp->h_addr;
         }
     } else sap->sin_addr.s_addr = htonl(INADDR_ANY);
-    port = strtol(portname, &endptr, 0);
+    port = (uint16_t) strtol(portname, &endptr, 0);
     if(*endptr == '\0') sap->sin_port = htons(port);
     else {
         sp = getservbyname(portname, protocol);
         if(sp == NULL)
             error(1, 0, "Unknown port: %s\n", portname);
-        else sap->sin_port = sp->s_port;
+        else sap->sin_port = (u_short) sp->s_port;
     }
 }

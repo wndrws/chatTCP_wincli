@@ -13,7 +13,7 @@
 #define CODE_LOGINREQUEST 1
 #define CODE_LOGOUTREQUEST 2
 #define CODE_LOGINANSWER 3
-#define CODE_LOGOUTANSWER 4
+#define CODE_LOGOUTANSWER 4 // Currently not in use
 #define CODE_FORCEDLOGOUT 5
 #define CODE_LOGINNOTIFY 6
 #define CODE_LOGOUTNOTIFY 7
@@ -35,7 +35,7 @@ private:
     SOCKET m_Socket;
     unordered_map<int, string> m_Users;
     unordered_map<int, vector<string>> m_Pending;
-    int m_ThisUserID;
+    //int m_ThisUserID;
     volatile int m_CurrentPeer = 0;
 
     int receiveUsersListPacket();
@@ -58,4 +58,5 @@ public:
     string receiveServerMessage();
     bool receiveLoginNotification();
     bool receiveLogoutNotification();
+    int sendHeartbeat() const;
 };

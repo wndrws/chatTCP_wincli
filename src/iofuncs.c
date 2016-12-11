@@ -87,7 +87,7 @@ int readline(SOCKET sock, char* bufptr, int len) {
         *bufptr++ = c;
         if(c == '\n') {
             *bufptr = '\0';
-            return bufptr - bufx;
+            return (int) (bufptr - bufx);
         }
     }
     set_errno(EMSGSIZE);

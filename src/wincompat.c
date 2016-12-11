@@ -1,5 +1,5 @@
-//#include <sys/timeb.h>
-#include <winsock2.h>
+#include "skel.h"
+#ifdef WINDOWS
 
 #define MINBSDSOCKERR   ( WSAEWOULDBLOCK )
 #define MAXBSDSOCKERR   ( MINBSDSOCKERR + \
@@ -61,8 +61,6 @@ int inet_aton(char *cp, struct in_addr* pin) {
     return 1;
 }
 
-/* gettimeofday - для tselect (?)*/
-
 /* strerror - версия, включающая код ошибок Winsock */
 char* strerror(int err) {
     if(err >= 0 && err < sys_nerr)
@@ -78,3 +76,4 @@ char* strerror(int err) {
     else
         return (char *) "Unknown error";
 }
+#endif

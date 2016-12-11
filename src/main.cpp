@@ -29,6 +29,9 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
     int rcvdb;
     bool ok = true;
     u_long mode = 0;
+    int hbcnt = 0;
+    int timeQuantum = 200; // sleep time between readings from non-blocking socket
+    int timeHb = 3000; // time to send the first heartbeat
 
     while(ok && bgThreadAlive) {
         if (!MessagesToSend.empty()) {
@@ -50,12 +53,20 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
         }
         rcvdb = readn(s, (char*) &code, 1);
         if (rcvdb == 0) {
+            cout << "[ Server closed the connection ]" << endl;
             break;
         } else if(rcvdb < 0) {
             int error = WSAGetLastError();
             if(error == WSAEWOULDBLOCK || error == WSAEINTR) {
                 // It's ok, continue doing job after some time
-                Sleep(200); // sleep for 0.2 seconds
+                Sleep((DWORD) timeQuantum);
+                if(++hbcnt == timeHb/timeQuantum) chatServer.sendHeartbeat();
+                else if(hbcnt == 2*timeHb/timeQuantum) chatServer.sendHeartbeat();
+                else if(hbcnt == 3*timeHb/timeQuantum) chatServer.sendHeartbeat();
+                else if(hbcnt == 4*timeHb/timeQuantum) {
+                    cerr << "Error: server is not responding." << endl;
+                    break;
+                }
             } else {
                 cerr << "Error: reading from socket " << s << endl;
                 break;
@@ -83,7 +94,6 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
                     break;
                 case CODE_FORCEDLOGOUT:
                     cout << "[ You were forced to logout by server ]" << endl;
-                    cout << "Press ENTER to exit..." << endl;
                     ok = false;
                     break;
                 case CODE_LOGINNOTIFY:
@@ -105,14 +115,15 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
                     }
                     break;
                 case CODE_HEARTBEAT:
-
+                    hbcnt = 0;
                     break;
                 default:
+                    cerr << "Warning: Packet with unknown code is received!" << endl;
                     break;
             }
         }
     }
-    //...
+    cout << "Press ENTER to exit..." << endl;
     bgThreadAlive = false;
     return 0;
 }
@@ -136,6 +147,10 @@ int main(int argc, char** argv) {
             if (username.length() <= MAX_USERNAME_LENGTH) {
                 if (username.find('#') != string::npos) {
                     cout << "Symbol # is prohibited to use in names!" << endl;
+                    continue;
+                } else if(username.empty()) {
+                    //Empty names shall not pass!
+                    continue;
                 } else break;
             }
             cout << "This name is too long! It should be at most " <<

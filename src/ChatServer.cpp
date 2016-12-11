@@ -240,6 +240,16 @@ bool ChatServer::receiveLogoutNotification() {
     return (it1 != m_Users.cend() && it2 == m_Users.cend());
 }
 
+int ChatServer::sendHeartbeat() const {
+    char code = CODE_HEARTBEAT;
+    int r = send(m_Socket, &code, 1, 0);
+    if(r == SOCKET_ERROR) {
+        printf("Failed to send heartbeat: %s\n", strerror(r));
+        return -1;
+    }
+    return 0;
+}
+
 // Parsing for old format of UsersList packet
 //    char buf [MAX_USERSONLINE*36];
 
