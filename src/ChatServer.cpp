@@ -103,8 +103,8 @@ void ChatServer::showUsersList() {
     list<string> vs;
     unordered_map<int, string>::const_iterator it;
     for (it = m_Users.cbegin(); it != m_Users.cend(); it++) {
-
-        vs.push_back(it->second + "#" + to_string(it->first));
+        if(!it->second.empty()) vs.push_back(it->second + "#" + to_string(it->first));
+        else vs.push_back("#" + to_string(it->first) + " (Public room)");
     }
     vs.sort();
     for(string str : vs) {
@@ -113,14 +113,14 @@ void ChatServer::showUsersList() {
 }
 
 string ChatServer::startChat(string peer) {
-    unordered_map<int, string>::iterator it;
+    unordered_map<int, string>::iterator it = m_Users.begin();
     if(peer.find('#') != string::npos) {
         //Search for the id
         string str_id = peer.substr(1);
         int id = atoi(str_id.c_str());
         it = m_Users.find(id);
     } else { //Search for the name
-        for (it = m_Users.begin(); it != m_Users.end(); ++it) {
+        for ( ; it != m_Users.end(); ++it) {
             if (it->second == peer) break;
         }
     }
@@ -176,7 +176,8 @@ void ChatServer::showMessage(int id_from) {
 
     string& name = m_Users.at(it->first);
     for(const string& msg : it->second) {
-        cout << "[ " << name << " ]: " << msg << endl;
+        if(!name.empty()) cout << "[ " << name << " ]: " << msg;
+        else cout << msg;
     }
     it->second.clear();
 }
@@ -184,6 +185,7 @@ void ChatServer::showMessage(int id_from) {
 string ChatServer::getPendingList() const {
     string list;
     for(auto&& item : m_Pending) {
+        if(m_Users.at(item.first).empty()) continue;
         if(!item.second.empty()) list += getFullName(item.first) + ", ";
     }
     if(list.empty()) return "";

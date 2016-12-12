@@ -20,6 +20,7 @@ static CAutoMutex autoMutex;
 volatile bool bgThreadAlive;
 volatile bool checkOnline = true;
 volatile bool checkPending = false;
+void showHelp();
 
 HANDLE bgThread;
 DWORD WINAPI BackgroundThread(LPVOID data) {
@@ -30,8 +31,8 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
     bool ok = true;
     u_long mode = 0;
     int hbcnt = 0;
-    int timeQuantum = 200; // sleep time between readings from non-blocking socket
-    int timeHb = 3000; // time to send the first heartbeat
+    int timeQuantum = 200; // sleep time between readings from non-blocking socket (ms)
+    int timeHb = 10000; // time to send the first heartbeat (ms)
 
     while(ok && bgThreadAlive) {
         if (!MessagesToSend.empty()) {
@@ -46,7 +47,14 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
                 }
             }
         }
-        // Receive messages
+        // Check incoming messages
+        if(checkPending && chatServer.getCurrentPeer() == 0
+                && !chatServer.getPendingList().empty()) {
+            cout << "[ " << "You have incoming message(s) from "
+                 << chatServer.getPendingList() << " ]" << endl;
+            checkPending = false;
+        }
+        // Receive packets
         if(mode == 0) {
             mode = 1;
             ioctlsocket(s, FIONBIO, &mode); // Make socket non-blocking
@@ -77,11 +85,6 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
             switch(code) {
                 case CODE_OUTMSG: // Incoming message from some client
                     checkPending = chatServer.receiveMessage();
-                    if(checkPending && chatServer.getCurrentPeer() == 0) {
-                        cout << "[ " << "You have incoming message(s) from "
-                             << chatServer.getPendingList() << " ]" << endl;
-                        checkPending = false;
-                    }
                     chatServer.showMessage(chatServer.getCurrentPeer());
                     break;
                 case CODE_SRVERR:
@@ -100,6 +103,7 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
                     if(chatServer.receiveLoginNotification()) {
                         cout << "[ Your peer has come online ]" << endl;
                     } else if(checkOnline) {
+                        if(chatServer.getCurrentPeer() == 0)
                         cout << "[ Some users have come online - "
                              << "type /refresh to see the whole list ]" << endl;
                         checkOnline = false;
@@ -109,6 +113,7 @@ DWORD WINAPI BackgroundThread(LPVOID data) {
                     if(chatServer.receiveLogoutNotification()) {
                         cout << "[ Your peer has gone offline ]" << endl;
                     } else if(checkOnline) {
+                        if(chatServer.getCurrentPeer() == 0)
                         cout << "[ Some users have gone offline - "
                              << "type /refresh to see the whole list ]" << endl;
                         checkOnline = false;
@@ -146,11 +151,7 @@ int main(int argc, char** argv) {
             getline(cin, username);
             if (username == "/quit") throw Exception();
             if (username == "/help") {
-                cout << "Command list:" << endl
-                     << "/refresh - show online users." << endl
-                     << "/bye - leave opened chat." << endl
-                     << "/quit - log out and exit." << endl
-                     << "/help - display this command list." << endl << endl;
+                showHelp();
                 continue;
             }
             if (username.length() <= MAX_USERNAME_LENGTH) {
@@ -204,13 +205,22 @@ int main(int argc, char** argv) {
             if(!bgThreadAlive) break;
             system("cls");
             //system("prompt [ You ]: ");
-            cout << "Chat with " << peername << ":" << endl << endl;
+            if(peername.at(0) == '#') cout << "Public room " << peername << ":" << endl << endl;
+            else cout << "Chat with " << peername << ":" << endl << endl;
             chatServer.showMessage(chatServer.getCurrentPeer());
             string str;
             while (bgThreadAlive) {
                 getline(cin, str);
                 if (str == "/quit") throw Exception();
                 if(!bgThreadAlive) break;
+                if (str == "/refresh") {
+                    chatServer.showUsersList();
+                    continue;
+                }
+                if (str == "/help") {
+                    showHelp();
+                    continue;
+                }
                 if (str == "/bye") {
                     chatServer.setCurrentPeer(0);
                     break;
@@ -223,6 +233,7 @@ int main(int argc, char** argv) {
             }
             if(!bgThreadAlive) break;
             checkOnline = true;
+            checkPending = true;
             system("cls");
         }
     } catch (Exception& ex) {
@@ -235,4 +246,12 @@ int main(int argc, char** argv) {
     cout << "Closing socket and exiting..." << endl;
     CLOSE(s);
     EXIT(0);
+}
+
+void showHelp() {
+    cout << "Command list:" << endl
+         << "/refresh - show online users." << endl
+         << "/bye - leave opened chat." << endl
+         << "/quit - log out and exit." << endl
+         << "/help - display this command list." << endl << endl;
 }
