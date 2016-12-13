@@ -236,6 +236,7 @@ bool ChatServer::receiveLogoutNotification() {
         }
         id = atoi(id_buf);
         m_Users.erase(id);
+        m_Pending.erase(id); // Unread messages are deleted (in this version)
     }
 
     auto it2 = m_Users.find(getCurrentPeer());
